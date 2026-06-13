@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web RAG</title>
+    <style>
+      /* General Styling */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .container {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        width: 400px;
+        text-align: center;
+      }
+
+      h2 {
+        color: #333;
+      }
+
+      label {
+        font-weight: bold;
+        display: block;
+        margin-top: 15px;
+        text-align: left;
+      }
+
+      select,
+      input[type="text"],
+      input[type="file"],
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px;
+        margin-top: 20px;
+        width: 100%;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      .output-section {
+        margin-top: 20px;
+        text-align: left;
+      }
+
+      .output-section h3 {
+        color: #007bff;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 5px;
+      }
+
+      ul {
+        list-style-type: none;
+        padding: 0;
+      }
+
+      ul li {
+        background: #e9ecef;
+        margin: 5px 0;
+        padding: 8px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Web-Based RAG</h2>
+
+      <form method="POST" enctype="multipart/form-data">
+        <label>Input:</label>
+        <select name="input">
+          {% for inp in inputs %}
+          <option value="{{ inp }}">{{ inp }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Search Query:</label>
+        <input
+          type="text"
+          name="query"
+          placeholder="Enter your search Query..."
+        />
+
+        <label>Link Provided?</label>
+        <input type="checkbox" id="isLink" name="isLink" value="true" />
+
+        <label>Question:</label>
+        <input
+          type="text"
+          name="question"
+          placeholder="Enter your question..."
+        />
+
+        <label>Select a Model:</label>
+        <select name="model">
+          {% for model in models %}
+          <option value="{{ model }}">{{ model }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Select a Search Engine:</label>
+        <select name="search">
+          {% for ser in searcher %}
+          <option value="{{ ser }}">{{ ser }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Number of Search Results:</label>
+        <input type="number" name="num_result" value="2" />
+
+        <button type="submit">Submit</button>
+      </form>
+      {% if output %}
+      <div class="output-section">
+        <h3>Processed Output:</h3>
+        <p>{{ output }}</p>
+
+        {% if files %}
+        <h3>Uploaded Files:</h3>
+        <ul>
+          {% for file in files %}
+          <li>{{ file }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </body>
+</html>
