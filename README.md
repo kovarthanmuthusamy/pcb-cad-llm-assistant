@@ -35,6 +35,9 @@ Kovarthanam Muthusamy designed the LangChain/ReAct orchestration, implemented th
 connected the natural-language parameter extractor to eCADSTAR automation, and integrated the
 project components into the assistant workflow. The vision component was developed by a project
 colleague and integrated into this system; it is not presented as an individually authored model.
+The team coordinated through Git; colleagues built a React user interface intended for use alongside
+the eCADSTAR PCB editor, which this backend connects to. That interface and the Docker setup used for
+reproducible environments are not part of this public showcase.
 
 This public repository is a reviewed research showcase. Private corpora, model adapters,
 checkpoints, Chroma databases, and raw eCADSTAR project/result files are deliberately excluded.
@@ -201,6 +204,10 @@ flowchart LR
   the result image.
 - The image is then described by the vision agent and returned to the orchestrator as text.
 
+![Default P2P topology driven by the simulation agent: driver IC3, series resistor R2, 100 mm transmission line TL1, receiver IC4](docs/images/p2p-topology.png)
+
+*Default P2P topology. The agent sets the series resistor (R2) and line length (TL1) from the user's request.*
+
 ### 4.5 Image Descriptor (vision agent)
 
 `image_descriptor_tool/` — a **fine-tuned IBM Granite-Vision-3.2-2B** vision-language model
@@ -215,13 +222,18 @@ VLM back-ends were explored and are included for comparison: **LLaVA-1.6-Mistral
 ## 5. Repository Structure
 
 ```text
-LLM_Agent/
+pcb-cad-llm-assistant/
 ├── main.py                     orchestrator — local DeepSeek-R1 (Ollama)
 ├── openai_main.py              orchestrator — GPT-4o
 ├── google_main.py              orchestrator — Gemini 1.5 Pro
 ├── langchain_Tools_v2.py       tool definitions (Simulation, PCB Expert, RAG)
+├── langchain_Tools.py          earlier tool definitions, kept for reference
 ├── template.py                 ReAct prompt template
 ├── setup_imports.py            path wiring
+├── src/pcb_assistant/
+│   └── contracts.py            portable, model-free tool-input contracts
+├── tests/
+│   └── test_contracts.py       contract tests run in CI
 ├── PCB/
 │   └── PCB_expert.py           fine-tuned SI/EDA expert (DeepSeek-R1-8B + LoRA)
 ├── RAGv2/
@@ -236,14 +248,23 @@ LLM_Agent/
 ├── image_descriptor_tool/
 │   ├── granite_vision32_inference.py   primary VLM (Granite-Vision)
 │   ├── qwen25_inference.py / llava_1_6_mistral_inference.py / smolvlm.py
-│   └── llava_*_augmentation.py         data augmentation for VLM fine-tuning
+│   ├── llava_*_augmentation.py         data augmentation for VLM fine-tuning
+│   └── *_Train.ipynb                   VLM fine-tuning notebooks
+├── hf_ollama/
+│   └── hf_join.py              merge a LoRA adapter for Ollama export
+├── docs/
+│   ├── EVALUATION.md           implemented evidence and benchmark plan
+│   └── images/                 eCADSTAR topology and result examples
+├── .github/workflows/ci.yml    Ruff + pytest on pushes and pull requests to main
+├── pyproject.toml              package, Ruff and pytest configuration
 ├── requirements.txt
+├── SECURITY.md
 └── .env.example                template for required credentials
 ```
 
 > Model weights/adapters, vector databases, private RAG corpora, and raw simulation databases/logs
-> are **not** distributed (see `.gitignore`). Three selected eCADSTAR result images remain as
-> documentation examples; they are not a substitute for a reproducible end-to-end benchmark.
+> are **not** distributed (see `.gitignore`). Selected eCADSTAR topology and result images remain in
+> `docs/images/` as documentation examples; they are not a substitute for a reproducible end-to-end benchmark.
 
 ---
 
@@ -339,7 +360,7 @@ metrics, and the benchmark required before making end-to-end accuracy claims.
 
 | Signal-integrity waveform | TDR response | Frequency-domain response |
 | --- | --- | --- |
-| ![Signal-integrity waveform](13.PNG) | ![TDR response](14.PNG) | ![Frequency-domain response](15.PNG) |
+| ![Signal-integrity waveform](docs/images/si-waveform.png) | ![TDR response](docs/images/tdr-response.png) | ![Frequency-domain response](docs/images/frequency-domain-response.png) |
 
 ---
 
