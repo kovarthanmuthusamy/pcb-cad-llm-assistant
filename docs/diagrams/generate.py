@@ -185,107 +185,139 @@ class Canvas:
 
 # --- diagrams ----------------------------------------------------------------------------
 def architecture(t: Theme) -> Canvas:
-    c = Canvas(960, 560, t, "System architecture of the PCB CAD LLM assistant")
+    """How a user request and the tool calls flow through the system."""
+
+    c = Canvas(960, 700, t, "How a request flows through the orchestrator and its tools")
 
     c.card(
-        200,
-        24,
-        260,
-        68,
+        360,
+        20,
+        240,
+        72,
         kind="input",
         tag="Input",
         title="User",
-        lines=("Question + up to 3 images",),
+        lines=("(text + up to 3 images)",),
     )
     c.card(
         40,
-        160,
-        580,
+        140,
+        240,
+        84,
+        kind="vision",
+        tag="Vision",
+        title="Image Descriptor",
+        lines=("(Granite-Vision VLM)",),
+    )
+    c.card(
+        300,
+        270,
+        360,
         104,
         kind="orchestrator",
         tag="Orchestrator",
         title="Orchestrator LLM",
-        lines=(
-            "LangChain ReAct agent · one JSON action per step · memory",
-            "DeepSeek-R1 via Ollama  ·  GPT-4o  ·  Gemini",
-        ),
+        lines=("DeepSeek-R1 / GPT-4o / Gemini", "(LangChain ReAct + memory)"),
+    )
+    c.card(
+        20,
+        470,
+        240,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="PCB Expert",
+        lines=("DeepSeek-R1-8B + LoRA",),
+    )
+    c.card(
+        360,
+        470,
+        240,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="RAG Agent",
+        lines=("docs + web (Chroma)",),
     )
     c.card(
         680,
-        160,
+        470,
         240,
-        104,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="Simulation Agent",
+        lines=("eCADSTAR Electrical Editor",),
+    )
+    c.card(
+        680,
+        610,
+        240,
+        72,
         kind="vision",
-        tag="Vision agent",
-        title="Image descriptor",
-        lines=("Granite-Vision 3.2 2B + LoRA", "image → text"),
+        tag="Vision",
+        title="Image Descriptor",
+        lines=("(Granite-Vision VLM)",),
     )
 
-    tools = [
-        (40, "PCB expert", ("Fine-tuned SI / EDA answers",)),
-        (360, "RAG agent", ("Documents and live web",)),
-        (680, "Simulation agent", ("Text → eCADSTAR run",)),
-    ]
-    for x, title, lines in tools:
-        c.card(x, 344, 240, 88, kind="tool", tag="Tool", title=title, lines=lines)
-    resources = [
-        (40, "DeepSeek-R1-Distill-Llama-8B", "+ LoRA adapter"),
-        (360, "Chroma vector stores", "PDFs · web search engines"),
-        (680, "eCADSTAR Electrical Editor", "Windows GUI automation"),
-    ]
-    for x, title, sub in resources:
-        c.card(
-            x, 476, 240, 64, kind="external", tag="Runs on", title=title, lines=(sub,), dashed=True
-        )
-        c.arrow(f"M{x + 120},432 V476", dashed=True, head=False)
+    # user request in, images through the vision agent, final answer out
+    c.arrow("M360,56 H160 V140")
+    c.arrow("M160,224 V322 H300")
+    c.label(160, 268, "image → text")
+    c.arrow("M450,92 V270")
+    c.label(440, 186, "text query", anchor="end")
+    c.arrow("M510,270 V92")
+    c.label(520, 186, "final answer", anchor="start")
 
-    # user <-> orchestrator, images to the vision agent
-    c.arrow("M300,92 V160")
-    c.label(290, 131, "question", anchor="end")
-    c.arrow("M360,160 V92")
-    c.label(370, 131, "answer", anchor="start")
-    c.arrow("M460,58 H800 V160")
-    c.label(630, 62, "images")
-    c.arrow("M680,212 H620")
-    c.label(650, 202, "text")
+    # tool calls (down) and observations (up)
+    c.arrow("M360,374 V412 H110 V470")
+    c.label(235, 403, "decompose & route (JSON action)", backdrop=False)
+    c.arrow("M170,470 V438 H400 V374")
+    c.label(300, 455, "observation")
+    c.arrow("M460,374 V470")
+    c.arrow("M500,470 V374")
+    c.label(508, 428, "observation", anchor="start")
+    c.arrow("M620,374 V412 H760 V470")
 
-    # orchestrator <-> tools
-    c.arrow("M160,264 V344", both=True)
-    c.arrow("M480,264 V344", both=True)
-    c.arrow("M590,264 V304 H760 V344", both=True)
-    c.arrow("M860,344 V264")
-    c.label(870, 309, "result plot", anchor="start")
-    c.label(320, 309, "JSON action  ↓   ·   text observation  ↑")
+    # simulation result image described by the vision agent, back as text
+    c.arrow("M800,554 V610")
+    c.label(810, 586, "result image", anchor="start")
+    c.arrow("M920,646 H944 V322 H660")
+    c.label(800, 322, "result → text")
     return c
 
 
 def query_lifecycle(t: Theme) -> Canvas:
+    """One example request, step by step (same steps as the original sequence diagram)."""
+
     names = [
         ("User", "input"),
-        ("Vision agent", "vision"),
-        ("Orchestrator", "orchestrator"),
-        ("Simulation agent", "tool"),
-        ("eCADSTAR", "external"),
-        ("PCB expert", "tool"),
+        ("Image Descriptor (VLM)", "vision"),
+        ("Orchestrator LLM", "orchestrator"),
+        ("PCB Expert", "tool"),
+        ("RAG Agent", "tool"),
+        ("Simulation Agent", "tool"),
     ]
+    user, vision, orch, expert, _rag, sim = range(len(names))
     xs = [85 + 158 * i for i in range(len(names))]
-    steps: list[tuple[int, int, str, bool]] = [
-        (0, 1, "attached images", False),
-        (1, 2, "image descriptions", True),
-        (0, 2, "question", False),
-        (2, 3, 'Simulation: "TDR, 100 Ω, 100 mm"', False),
-        (3, 4, "patch circuit, run analysis", False),
-        (4, 3, "result plot", True),
-        (3, 1, "result plot", False),
-        (1, 3, "plot description", True),
-        (3, 2, "observation (text)", True),
-        (2, 5, "explain the reflection", False),
-        (5, 2, "domain explanation", True),
-        (2, 0, "final answer", True),
+    # (source, target, text, is_reply); a None source is a note over the target
+    rows: list[tuple[int | None, int, str, bool]] = [
+        (user, vision, "query + image(s)", False),
+        (vision, orch, "textual image description(s)", True),
+        (user, orch, "text query", False),
+        (None, orch, "Reason: which tool?", False),
+        (orch, sim, '"SI, R=100Ω, TL=100mm"', False),
+        (sim, sim, "drive eCADSTAR, capture result image", False),
+        (sim, vision, "result image", False),
+        (vision, sim, "textual description", True),
+        (sim, orch, "observation (result as text)", True),
+        (orch, expert, "domain follow-up (SI theory)", False),
+        (expert, orch, "grounded explanation", True),
+        (orch, user, "final synthesized answer", True),
     ]
-    top, gap = 92, 44
-    height = top + gap * len(steps) + 56
-    c = Canvas(960, height, t, "Lifecycle of one query through the agents")
+    top, gap = 92, 46
+    height = top + gap * len(rows) + 56
+    c = Canvas(960, height, t, "How one request flows through the system")
 
     for x, (name, kind) in zip(xs, names, strict=True):
         accent = t.accents[kind]
@@ -294,29 +326,52 @@ def query_lifecycle(t: Theme) -> Canvas:
             'stroke-dasharray="4 5"/>'
         )
         c.parts.append(
-            f'<rect x="{x - 70}" y="20" width="140" height="44" rx="10" fill="{t.card}" '
+            f'<rect x="{x - 74}" y="20" width="148" height="44" rx="10" fill="{t.card}" '
             f'stroke="{accent}" stroke-width="1.5"/>'
-            f'<rect x="{x - 70}" y="20" width="140" height="44" rx="10" fill="{accent}" '
+            f'<rect x="{x - 74}" y="20" width="148" height="44" rx="10" fill="{accent}" '
             'fill-opacity="0.08"/>'
         )
-        c.text(x, 47, name, size=13.5, weight=600)
+        c.text(x, 47, name, size=12 if len(name) > 16 else 13.5, weight=600)
 
-    # the orchestrator reasons between receiving the question and calling a tool
+    def row_y(i: int) -> int:
+        return top + gap * i + gap // 2
+
+    # the orchestrator is active from the text query until the final answer
     c.parts.append(
-        f'<rect x="{xs[2] - 6}" y="{top + gap * 2 + gap // 2 - 4}" width="12" '
-        f'height="{gap * 9 + 8}" rx="3" fill="{t.accents["orchestrator"]}" '
-        'fill-opacity="0.18"/>'
+        f'<rect x="{xs[orch] - 6}" y="{row_y(2) - 4}" width="12" '
+        f'height="{row_y(len(rows) - 1) - row_y(2) + 8}" rx="3" '
+        f'fill="{t.accents["orchestrator"]}" fill-opacity="0.18"/>'
     )
 
-    for i, (src, dst, text, reply) in enumerate(steps):
-        y = top + gap * i + gap // 2
-        x1, x2 = xs[src], xs[dst]
-        pad = 8 if src == 2 or dst == 2 else 2
+    step = 0
+    for i, (src, dst, text, reply) in enumerate(rows):
+        y = row_y(i)
+        x2 = xs[dst]
+        if src is None:  # note
+            accent = t.accents["orchestrator"]
+            c.parts.append(
+                f'<rect x="{x2 - 90}" y="{y - 16}" width="180" height="30" rx="8" '
+                f'fill="{t.card}" stroke="{accent}" stroke-width="1.2"/>'
+                f'<rect x="{x2 - 90}" y="{y - 16}" width="180" height="30" rx="8" '
+                f'fill="{accent}" fill-opacity="0.10"/>'
+            )
+            c.text(x2, y + 4, text, size=12.5, color=accent, weight=600)
+            continue
+        step += 1
+        x1 = xs[src]
+        colour = t.accents[names[src][1]]
+        if src == dst:  # self call
+            c.arrow(f"M{x1 + 8},{y - 6} H{x1 + 46} V{y + 12} H{x1 + 10}")
+            c.label(x1 - 12, y - 13, text, anchor="end", backdrop=False)
+            c.badge(x1 + 26, y - 6, step, colour)
+            continue
+        pad = 8 if orch in (src, dst) else 2
         start = x1 + (pad if x2 > x1 else -pad)
         end = x2 - (pad if x2 > x1 else -pad)
         c.arrow(f"M{start},{y} H{end}", dashed=reply)
         c.label((x1 + x2) / 2, y - 13, text, backdrop=False)
-        c.badge(x1 + (18 if x2 > x1 else -18), y, i + 1, t.accents[names[src][1]])
+        c.badge(x1 + (18 if x2 > x1 else -18), y, step, colour)
+
     legend_y = height - 22
     c.arrow(f"M30,{legend_y - 4} H70")
     c.text(78, legend_y, "request", size=11.5, color=t.muted, anchor="start")
