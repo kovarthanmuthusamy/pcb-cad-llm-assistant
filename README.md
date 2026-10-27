@@ -275,8 +275,7 @@ pcb-cad-llm-assistant/
 ## Security
 
 - **No secrets in source.** API keys (OpenAI, Google, Hugging Face) come from environment variables
-  or a gitignored `.env`; `.env.example` is the template. If you forked an earlier version that
-  contained hard-coded keys, rotate them.
+  or a gitignored `.env`; `.env.example` is the template.
 - Raw CAD projects, simulation databases, document corpora and model weights are excluded until
   ownership and redistribution rights are confirmed.
 - The RAG web UI has no authentication and runs with Flask debug off unless `PCB_UI_DEBUG=1`.
