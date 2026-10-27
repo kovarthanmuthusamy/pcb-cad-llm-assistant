@@ -1,85 +1,77 @@
 <div align="center">
 
-# A Multi-Agent LLM Assistant for PCB Design CAD (eCADSTAR)
+# PCB CAD LLM Assistant
 
-*An orchestrated, multimodal, tool-using chatbot that helps beginners learn and operate a
-Signal-Integrity EDA workflow — answering domain questions, running live simulations, and
-interpreting circuit & result images.*
+**A multi-agent, multimodal LLM assistant for Signal-Integrity PCB design in eCADSTAR**
+
+*Answers domain questions, runs live CAD simulations from plain English, and reads circuit and
+result images, so that beginners can learn and operate a Signal-Integrity EDA workflow.*
+
+[![CI](https://github.com/kovarthanmuthusamy/pcb-cad-llm-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/kovarthanmuthusamy/pcb-cad-llm-assistant/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-ReAct%20agent-1C3C3C)
+![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)
+![Checked with mypy](https://img.shields.io/badge/mypy-checked-2A6DB2)
+![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+[Overview](#overview) · [Architecture](#architecture) · [Quick start](#quick-start) ·
+[Components](#components) · [Project structure](#project-structure) · [Evidence](#verification-and-evidence)
 
 </div>
 
-[![CI](https://github.com/kovarthanmuthusamy/pcb-cad-llm-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/kovarthanmuthusamy/pcb-cad-llm-assistant/actions/workflows/ci.yml)
+<p align="center">
+  <img src="docs/images/ecadstar-results.png" alt="eCADSTAR results: signal-integrity waveform, TDR response and frequency-domain response" width="100%">
+</p>
+<p align="center"><sub>SI, TDR and frequency-domain results produced by eCADSTAR runs that the simulation agent drove.</sub></p>
 
 ---
 
-## Abstract
+## Overview
 
-Electronic Design Automation (EDA) tools such as **eCADSTAR** are powerful but steep to learn: a
-newcomer must simultaneously understand Signal-Integrity (SI) theory, the CAD UI, and how to read
-simulation outputs. This project develops a **multi-agent Large Language Model (LLM) assistant** that
-lowers that barrier. A central **orchestrator LLM** decomposes a user's request and routes it to a
-set of specialized tools: a **domain-fine-tuned PCB expert**, a **Retrieval-Augmented Generation
-(RAG)** agent over internal documents and the live web, a **simulation agent** that drives the
-eCADSTAR Electrical Editor and returns results, and a **vision agent** that turns circuit and
-simulation **images into text** so the (text-only) orchestrator can reason over them. The system is
-**multimodal** (accepts text + images), **model-agnostic** (the orchestrator can be a local DeepSeek-R1
-model via Ollama, OpenAI GPT-4o, or Google Gemini), and grounded in the SI sub-domain of EDA through
-LoRA fine-tuning.
+EDA tools such as **eCADSTAR** are powerful but hard to learn: a newcomer has to understand
+Signal-Integrity (SI) theory, the CAD interface and how to read simulation results all at once. This
+project puts an **orchestrator LLM** in front of four specialised tools:
 
-> **Context.** Group research project. Built with vision-language and reasoning models available in
-> 2023–2024 that were strong at both agentic tool-use and image understanding.
+| | Tool | What it does |
+| --- | --- | --- |
+| 📘 | **PCB expert** | DeepSeek-R1-Distill-Llama-8B with a LoRA adapter fine-tuned on SI/EDA question–answer pairs |
+| 🔎 | **RAG agent** | Routes a question to a local corpus, uploaded PDFs or a live web search, then answers from the retrieved text (Chroma) |
+| ⚙️ | **Simulation agent** | Turns *"run a TDR with 100 Ω and a 100 mm line"* into parameters and drives the eCADSTAR Electrical Editor |
+| 🖼️ | **Vision agent** | A fine-tuned Granite-Vision VLM that turns circuit screenshots and result plots into text |
+
+Highlights:
+
+- **Model-agnostic orchestrator.** Local DeepSeek-R1 through Ollama, OpenAI GPT-4o or Google Gemini,
+  selected with `--provider`.
+- **Multimodal.** Up to three images per question, and simulation plots are described back to the
+  agent as text.
+- **Engineering hygiene.** One installable package, all settings in environment variables, heavy
+  libraries loaded lazily, 130 unit tests that need no model, GPU or CAD licence, and Ruff, mypy,
+  pytest and a Docker build in CI.
+
+> **Context.** Group research project, built with the reasoning and vision-language models available
+> in 2023–2024 that were strong at both agentic tool use and image understanding.
 
 ### Contribution and ownership
 
-Kovarthanam Muthusamy designed the LangChain/ReAct orchestration, implemented the RAG sub-agent,
-connected the natural-language parameter extractor to eCADSTAR automation, built the FastAPI
-backend behind the team's user interface, and integrated the project components into the assistant
-workflow. The vision component, including the fine-tuning of the vision-language model and the VLM
-experiments in `research/vlm/`, was developed by a project colleague and integrated into this
-system; it is not presented as an individually authored model. The team coordinated through Git;
-colleagues built a React user interface intended for use alongside the eCADSTAR PCB editor. The
-FastAPI backend, that interface and the Docker setup used for reproducible environments are not
-part of this public showcase.
+**Kovarthanam Muthusamy** designed the LangChain/ReAct orchestration, fine-tuned the PCB-expert LoRA
+adapter, implemented the RAG sub-agent, connected the natural-language parameter extractor to the
+eCADSTAR automation, built the FastAPI backend behind the team's user interface, and integrated the
+components into the assistant workflow.
 
-This public repository is a reviewed research showcase. Private corpora, model adapters,
-checkpoints, Chroma databases, and raw eCADSTAR project/result files are deliberately excluded.
+The **vision component**, including the fine-tuning of the vision-language model and the VLM
+experiments in [`research/vlm/`](research/vlm), was developed by a project colleague and is
+integrated here. It is not presented as an individually authored model. Colleagues also built a
+React interface intended for use alongside the eCADSTAR PCB editor. The FastAPI backend and that
+interface are not part of this public showcase.
 
----
-
-## Table of Contents
-
-1. [Motivation](#1-motivation)
-2. [System Architecture](#2-system-architecture)
-3. [Query Lifecycle](#3-query-lifecycle)
-4. [Components](#4-components)
-   - [4.1 Orchestrator](#41-orchestrator-model-agnostic)
-   - [4.2 PCB Expert (fine-tuned)](#42-pcb-expert-fine-tuned-sub-agent)
-   - [4.3 RAG Agent](#43-rag-agent-documents--web)
-   - [4.4 Simulation Agent](#44-simulation-agent-ecadstar)
-   - [4.5 Image Descriptor (vision)](#45-image-descriptor-vision-agent)
-5. [Repository Structure](#5-repository-structure)
-6. [Setup & Usage](#6-setup--usage)
-7. [Security Notes](#7-security-notes)
-8. [Limitations & Future Work](#8-limitations--future-work)
-9. [Verification & Evidence](#9-verification--evidence)
+Private corpora, model adapters, checkpoints, Chroma databases and raw eCADSTAR project and result
+files are deliberately excluded.
 
 ---
 
-## 1. Motivation
-
-A beginner using a Signal-Integrity CAD tool repeatedly hits three walls:
-
-1. **Knowledge** — "What is a TDR analysis? Why does my net ring?"
-2. **Operation** — "How do I actually run this simulation with these parameters?"
-3. **Interpretation** — "What does this result waveform / circuit screenshot mean?"
-
-A single LLM cannot reliably do all three: it lacks tool access, up-to-date/document-grounded facts,
-and (for a text model) the ability to see images. This project addresses each wall with a dedicated
-agent, coordinated by an orchestrator — a classic **planner + specialized-tools** architecture.
-
----
-
-## 2. System Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -89,7 +81,7 @@ flowchart TB
 
     ORC{{"🧠 Orchestrator LLM<br/>DeepSeek-R1 / GPT-4o / Gemini<br/>(LangChain ReAct + memory)"}}
 
-    ORC -- "decompose & route<br/>(JSON action)" --> T1["📘 PCB Expert<br/>fine-tuned DeepSeek-R1-8B + LoRA"]
+    ORC -- "decompose & route<br/>(JSON action)" --> T1["📘 PCB Expert<br/>DeepSeek-R1-8B + LoRA"]
     ORC --> T2["🔎 RAG Agent<br/>docs + web (Chroma)"]
     ORC --> T3["⚙️ Simulation Agent<br/>eCADSTAR Electrical Editor"]
 
@@ -105,15 +97,13 @@ flowchart TB
     style IMG2 fill:#33415c,color:#fff
 ```
 
-The orchestrator follows a **ReAct** loop (Reason → Act → Observe), emitting a structured JSON
-`{action, action_input}` per step (LangChain `STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION`), and
-keeps short-term context via `ConversationBufferMemory`. Because every tool returns **text**, even
-inherently visual results (simulation plots) are first passed through the vision agent — making the
-whole pipeline reason in a single textual space.
+The orchestrator runs a **ReAct** loop (reason → act → observe) and emits one structured JSON
+`{action, action_input}` per step (LangChain `STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION`), with
+`ConversationBufferMemory` for short-term context. Every tool returns **text**, so visual results
+are passed through the vision agent first and the whole pipeline reasons in one textual space.
 
----
-
-## 3. Query Lifecycle
+<details>
+<summary><b>Query lifecycle (sequence diagram)</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -138,49 +128,99 @@ sequenceDiagram
     O-->>User: final synthesized answer
 ```
 
+</details>
+
 ---
 
-## 4. Components
+## Quick start
 
-### 4.1 Orchestrator (model-agnostic)
+<p align="center">
+  <img src="docs/images/cli.png" alt="Terminal: pcb-assistant --help, the simulation request parser turning a sentence into TDR, 100 ohm, 100 mm, and the test suite passing" width="80%">
+</p>
 
-One agent, one tool set and one prompt; the back-end is chosen with `--provider`:
+### With Docker (Ollama included)
 
-| Command | Default orchestrator model | Provider |
-| ------- | -------------------------- | -------- |
-| `python -m pcb_assistant --provider ollama` | `deepseek-r1:70b` (or `:32b`) | **Local** via Ollama |
-| `python -m pcb_assistant --provider openai` | `gpt-4o` | OpenAI |
-| `python -m pcb_assistant --provider google` | `gemini-1.5-pro` (check that the model is still served) | Google |
+```bash
+cp .env.example .env                                   # optional: API keys, model names
+docker compose up -d ollama
+docker compose exec ollama ollama pull deepseek-r1:32b
+docker compose exec ollama ollama pull nomic-embed-text
+PCB_ORCHESTRATOR_MODEL=deepseek-r1:32b docker compose run --rm assistant
+docker compose up webui                                # RAG web UI on http://127.0.0.1:5000
+```
 
-Model names, temperature and the other tunables are environment variables (see
-[`.env.example`](.env.example) and `src/pcb_assistant/config.py`). The small differences between
-providers (iteration limit, one extra prompt sentence, whether the last message is repeated in the
-input) are explicit profiles in `llm.py`.
+The image uses CPU PyTorch by default. For a GPU build, pass
+`--build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124` and enable the GPU block in
+[`docker-compose.yml`](docker-compose.yml). The simulation tool needs Windows with eCADSTAR, so in a
+container it replies with an error message instead of running a simulation; the other tools work.
 
-Tools are registered as LangChain `StructuredTool`s with Pydantic input schemas
-(`src/pcb_assistant/tools.py`). The orchestrator emits tool input in several shapes; one function
-(`unwrap_tool_input`) normalises them, and the tools reuse the tested parsing in `contracts.py`.
-A system instruction constrains the agent to **one action at a time**, and post-processing strips
-the model's `<think>` traces and trailing JSON before display.
+### Local install
 
-### 4.2 PCB Expert (fine-tuned sub-agent)
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt        # models, RAG, Windows GUI adapter
+pip install -e .                       # the pcb_assistant package and the pcb-assistant command
+cp .env.example .env                   # then fill in your keys
 
-`src/pcb_assistant/experts/pcb_expert.py` — a **DeepSeek-R1-Distill-Llama-8B** base model with a
-**LoRA adapter** fine-tuned on domain question–answer pairs in the **Signal-Integrity area of EDA**.
-It answers PCB design, manufacturing, and noise questions as concise paragraphs, and is the
-*primary* tool for any PCB-related query. The model and adapter are loaded on first use and then
-kept in memory. A Llama-3-8B + LoRA variant was also trained (see
-[docs/EVALUATION.md](docs/EVALUATION.md)); only the DeepSeek-based expert is wired in here.
+ollama pull deepseek-r1:70b            # default orchestrator (deepseek-r1:32b is lighter)
+ollama pull deepseek-r1:32b            # RAG generator and router
+ollama pull nomic-embed-text           # embeddings for the document store
 
-### 4.3 RAG Agent (documents + web)
+pcb-assistant --provider ollama        # or: openai, google; add --log-level INFO to see routing
+```
 
-`src/pcb_assistant/rag/` — a **router-based** retrieval agent. A lightweight LLM router
-(`router.py`) looks at the file names of the available local corpora and at the query, then selects
-a source:
+At the prompt, type a question and optionally give up to **3 image paths**. Simulation images are
+saved under `simulation_images/` (`ECADSTAR_OUTPUT_DIR`); RAG stores and document folders live under
+`rag_data/` (`PCB_RAG_HOME`).
+
+| Command | Default model | Provider |
+| --- | --- | --- |
+| `pcb-assistant --provider ollama` | `deepseek-r1:70b` | **Local** via Ollama |
+| `pcb-assistant --provider openai` | `gpt-4o` | OpenAI |
+| `pcb-assistant --provider google` | `gemini-1.5-pro` (check that it is still served) | Google |
+
+Every model name, path and timing is an environment variable; see [`.env.example`](.env.example) and
+[`config.py`](src/pcb_assistant/config.py).
+
+### Checks only (no model, GPU, credentials, Windows or eCADSTAR)
+
+```bash
+pip install -e ".[dev]"
+ruff check . && mypy && pytest
+# or, in a container exactly as CI runs it:
+docker build --target test -t pcb-assistant:test . && docker run --rm pcb-assistant:test
+```
+
+---
+
+## Components
+
+### Orchestrator
+
+One agent, one tool set and one prompt. The small differences between providers (iteration limit,
+one extra prompt sentence, whether the last message is repeated in the input) are explicit profiles
+in [`llm.py`](src/pcb_assistant/llm.py). Tools are LangChain `StructuredTool`s with Pydantic input
+schemas ([`tools.py`](src/pcb_assistant/tools.py)). Models send tool input in several shapes;
+`unwrap_tool_input` normalises them and the tools reuse the tested parsing in
+[`contracts.py`](src/pcb_assistant/contracts.py). A system instruction keeps the agent to one action
+at a time, and post-processing removes `<think>` traces and trailing JSON before display.
+
+### PCB expert
+
+[`experts/pcb_expert.py`](src/pcb_assistant/experts/pcb_expert.py): **DeepSeek-R1-Distill-Llama-8B**
+with a **LoRA adapter** fine-tuned on question–answer pairs from the Signal-Integrity area of EDA.
+It answers PCB design, manufacturing and noise questions and is the first tool for any PCB query.
+The model is loaded on first use and then kept in memory. A Llama-3-8B + LoRA variant was also
+trained (see [docs/EVALUATION.md](docs/EVALUATION.md)); only the DeepSeek-based expert is wired in.
+
+### RAG agent
+
+[`rag/`](src/pcb_assistant/rag): an LLM router looks at the available corpora and the question and
+picks a source.
 
 ```mermaid
 flowchart LR
-    Q["query"] --> C{"Chooser LLM<br/>pick source"}
+    Q["query"] --> C{"Router LLM<br/>pick source"}
     C -- "1" --> D["Local default<br/>Chroma store"]
     C -- "2" --> P["PDF documents<br/>(embed → Chroma)"]
     C -- "3" --> W["Live web search<br/>DuckDuckGo / Google CSE / Brave / Bing"]
@@ -188,198 +228,137 @@ flowchart LR
     style C fill:#1b5e20,color:#fff
 ```
 
-Retrieved passages are embedded and stored in a **Chroma** vector database, then a generator model
-(`deepseek-r1:32b`) answers from the retrieved context. Multiple search back-ends are supported
-(`web_search.py`). This is the fallback when the fine-tuned expert lacks coverage and provides
-**document- and web-grounded** facts.
+Passages are embedded into **Chroma** and `deepseek-r1:32b` answers from the retrieved context. The
+router accepts only 1, 2 or 3 and falls back to the web for anything else. A small local Flask UI
+manages uploads and queries:
 
-The router can only answer 1, 2 or 3 and anything else falls back to the web, so it can never
-trigger a delete action. A small local Flask page (`python -m pcb_assistant.rag.webui.app`) manages
-uploads and queries; it has no authentication and is meant for local use only.
+<p align="center">
+  <img src="docs/images/rag-web-ui.png" alt="RAG web UI: document upload page and web search page" width="75%">
+</p>
 
-### 4.4 Simulation Agent (eCADSTAR)
+```bash
+python -m pcb_assistant.rag.webui.app      # http://127.0.0.1:5000 and /web
+```
 
-Turns natural language into an actual CAD simulation:
+It has no authentication and is meant for local use only.
+
+### Simulation agent
 
 ```mermaid
 flowchart LR
     NL["'Run SI with 100Ω<br/>and 100mm line'"] --> SB["Parser + S-BERT fallback<br/>(simulation/request.py)"]
     SB --> PARAMS["type ∈ {SI, FD, TDR}<br/>R_value, TL_value"]
-    PARAMS --> CAD["eCADSTAR Electrical Editor<br/>GUI automation (pyautogui/win32)<br/>P2P topology"]
+    PARAMS --> CAD["eCADSTAR Electrical Editor<br/>GUI automation (pyautogui)<br/>P2P topology"]
     CAD --> IMG["result image"]
     style SB fill:#33415c,color:#fff
     style CAD fill:#7c2d12,color:#fff
 ```
 
-- **Parameter extraction** (`simulation/request.py`, `contracts.py`): explicit **SI** (Signal
-  Integrity), **FD** (Frequency Domain) or **TDR** (Time-Domain Reflectometry) terms and the
-  resistor (Ω) and transmission-line length (mm) values are parsed deterministically. Only when no
-  analysis is named does a Sentence-BERT model (`all-MiniLM-L6-v2`, `simulation/semantic.py`)
-  suggest one, and a match below a similarity threshold is rejected so the agent can ask the user
+- **Parameter extraction** ([`simulation/request.py`](src/pcb_assistant/simulation/request.py),
+  `contracts.py`): SI, FD (frequency domain) or TDR (time-domain reflectometry), the resistor value
+  (Ω) and the line length (mm) are parsed deterministically. Only when no analysis is named does a
+  Sentence-BERT model (`all-MiniLM-L6-v2`) suggest one, and a weak match is rejected so the agent asks
   instead of guessing.
-- **Execution** (`simulation/ecadstar.py`): patches the SIDF/circuit file with those values and
-  drives the eCADSTAR Electrical Editor via GUI automation on the default **P2P** topology, capturing
-  the result image. The fixed waits of the GUI automation are configurable
-  (`ECADSTAR_OPEN_WAIT_S`, `ECADSTAR_RUN_WAIT_S`).
-- The image is then described by the vision agent and returned to the orchestrator as text.
+- **Execution** ([`simulation/ecadstar.py`](src/pcb_assistant/simulation/ecadstar.py)): patches the
+  circuit file and drives the eCADSTAR Electrical Editor on the default **P2P** topology, then
+  captures the result image. The GUI waits are configurable (`ECADSTAR_OPEN_WAIT_S`,
+  `ECADSTAR_RUN_WAIT_S`).
+- The image is described by the vision agent and returned to the orchestrator as text.
 
-![Default P2P topology driven by the simulation agent: driver IC3, series resistor R2, 100 mm transmission line TL1, receiver IC4](docs/images/p2p-topology.png)
+<p align="center">
+  <img src="docs/images/p2p-topology.png" alt="Default P2P topology: driver IC3, series resistor R2, 100 mm transmission line TL1, receiver IC4" width="70%">
+</p>
+<p align="center"><sub>Default P2P topology. The agent sets the series resistor (R2) and the line length (TL1) from the request.</sub></p>
 
-*Default P2P topology. The agent sets the series resistor (R2) and line length (TL1) from the user's request.*
+### Vision agent
 
-### 4.5 Image Descriptor (vision agent)
-
-`src/pcb_assistant/vision/granite.py` — a **fine-tuned IBM Granite-Vision-3.2-2B** vision-language
-model (4-bit NF4 quantized, LoRA adapter set with `PCB_VISION_ADAPTER_PATH`), prompted to describe
-PCB-domain images: circuit topologies (star / P2P) and simulation result plots. It serves **two**
-roles: (1) converting user-attached images into text at input, and (2) converting simulation
-**output** images into text. The model is loaded on first use. The fine-tuning and the alternative
-VLM back-ends that were compared (**LLaVA-1.6-Mistral**, **Qwen2.5-VL-7B**, **SmolVLM-500M**) are a
-project colleague's work; their notebooks and scripts are kept unchanged in `research/vlm/`.
+[`vision/granite.py`](src/pcb_assistant/vision/granite.py): a fine-tuned **IBM Granite-Vision-3.2-2B**
+(4-bit NF4, LoRA adapter set with `PCB_VISION_ADAPTER_PATH`) prompted to describe circuit topologies
+and simulation plots. It describes the user's images at input and the simulation output images. The
+fine-tuning and the compared alternatives (LLaVA-1.6-Mistral, Qwen2.5-VL-7B, SmolVLM-500M) are a
+project colleague's work, kept unchanged in [`research/vlm/`](research/vlm).
 
 ---
 
-## 5. Repository Structure
+## Project structure
 
 ```text
 pcb-cad-llm-assistant/
-├── main.py                         launcher: python main.py --provider ollama|openai|google
 ├── src/pcb_assistant/
-│   ├── cli.py                      command line and chat loop
-│   ├── agent.py                    ReAct agent: tools, memory, system instruction
-│   ├── llm.py                      orchestrator back-ends (ollama / openai / google profiles)
-│   ├── tools.py                    Simulation, PCB Expert and RAG tools
-│   ├── config.py                   all settings, read from the environment / .env
-│   ├── contracts.py                portable, model-free tool-input contracts
-│   ├── text.py                     cleaning of model output
-│   ├── simulation/                 request parsing, S-BERT fallback, eCADSTAR GUI adapter
-│   ├── experts/pcb_expert.py       fine-tuned SI/EDA expert (DeepSeek-R1-8B + LoRA)
-│   ├── vision/granite.py           image -> text (Granite-Vision)
-│   └── rag/                        router, document and web retrieval, search back-ends, web UI
-├── tests/                          unit tests with fakes: no model, GPU, credentials or eCADSTAR
-├── research/vlm/                   VLM fine-tuning notebooks and alternative back-ends (teammate)
-├── hf_ollama/hf_join.py            merge a LoRA adapter for Ollama export
-├── docs/
-│   ├── EVALUATION.md               implemented evidence and benchmark plan
-│   └── images/                     eCADSTAR topology and result examples
-├── .github/workflows/ci.yml        Ruff + mypy + pytest on pushes and pull requests to main
-├── pyproject.toml                  package, Ruff, mypy and pytest configuration
-├── requirements.txt                runtime dependencies (models, RAG, Windows GUI adapter)
+│   ├── cli.py                  command line and chat loop  (pcb-assistant, python -m pcb_assistant)
+│   ├── agent.py                ReAct agent: tools, memory, system instruction
+│   ├── llm.py                  orchestrator back-ends (ollama / openai / google profiles)
+│   ├── tools.py                simulation, PCB expert and RAG tools
+│   ├── config.py               all settings, read from the environment / .env
+│   ├── contracts.py            model-free tool-input contracts
+│   ├── simulation/             request parsing, S-BERT fallback, eCADSTAR GUI adapter
+│   ├── experts/pcb_expert.py   fine-tuned SI/EDA expert (DeepSeek-R1-8B + LoRA)
+│   ├── vision/granite.py       image → text (Granite-Vision)
+│   └── rag/                    router, document and web retrieval, search back-ends, web UI
+├── tests/                      130 unit tests with fakes
+├── research/vlm/               VLM fine-tuning notebooks and alternative back-ends (colleague)
+├── hf_ollama/hf_join.py        merge a LoRA adapter for Ollama export
+├── docs/                       evaluation notes and images
+├── Dockerfile                  targets: test (CI checks) and runtime (the assistant)
+├── docker-compose.yml          Ollama + assistant + RAG web UI
+├── .github/workflows/ci.yml    Ruff, mypy, pytest and the Docker test image
+├── pyproject.toml              package, Ruff, mypy and pytest configuration
+├── requirements.txt            runtime dependencies (models, RAG, Windows GUI adapter)
+├── .env.example                every setting, with defaults
 ├── SECURITY.md
-└── .env.example                    template for credentials and optional settings
+└── LICENSE
 ```
-
-> Model weights/adapters, vector databases, private RAG corpora, and raw simulation databases/logs
-> are **not** distributed (see `.gitignore`). Selected eCADSTAR topology and result images remain in
-> `docs/images/` as documentation examples; they are not a substitute for a reproducible end-to-end benchmark.
 
 ---
 
-## 6. Setup & Usage
+## Security
 
-**1. Environment**
+- **No secrets in source.** API keys (OpenAI, Google, Hugging Face) come from environment variables
+  or a gitignored `.env`; `.env.example` is the template. If you forked an earlier version that
+  contained hard-coded keys, rotate them.
+- Raw CAD projects, simulation databases, document corpora and model weights are excluded until
+  ownership and redistribution rights are confirmed.
+- The RAG web UI has no authentication and runs with Flask debug off unless `PCB_UI_DEBUG=1`.
+  Docker Compose publishes it on `127.0.0.1` only. Do not expose it to a network.
 
-```bash
-python -m venv .venv && source .venv/bin/activate   # or use conda
-pip install -r requirements.txt                      # runtime: models, RAG, Windows GUI adapter
-pip install -e .                                     # installs the pcb_assistant package
-```
-
-For the checks and unit tests only—no model, GPU, credentials, Windows, or eCADSTAR required:
-
-```bash
-pip install -e ".[dev]"
-ruff check .
-mypy
-pytest
-```
-
-`requirements.txt` lists portable top-level dependencies. GPU-specific PyTorch builds should be
-selected for the target CUDA environment using the official PyTorch installation guidance.
-
-**2. Credentials** — copy the template and fill in your own keys:
-
-```bash
-cp .env.example .env       # then edit .env
-```
-
-**3. Local models** (for the default orchestrator) — pull via [Ollama](https://ollama.com):
-
-```bash
-ollama pull deepseek-r1:70b     # primary
-ollama pull deepseek-r1:32b     # lighter alternative / RAG generator
-ollama pull nomic-embed-text    # embeddings for the document store
-```
-
-**4. Run** the interactive assistant:
-
-```bash
-python -m pcb_assistant --provider ollama   # local DeepSeek-R1 orchestrator (default)
-python -m pcb_assistant --provider openai   # GPT-4o
-python -m pcb_assistant --provider google   # Gemini
-# `python main.py --provider ...` does the same; add --log-level INFO to see routing decisions
-```
-
-At the prompt, type a query and optionally provide up to **3 image paths**. Simulation output images
-are saved under `simulation_images/` (`ECADSTAR_OUTPUT_DIR`); the RAG stores and document folders live
-under `rag_data/` (`PCB_RAG_HOME`).
-
-> The simulation agent automates the **eCADSTAR Electrical Editor** through the Windows GUI
-> (`pyautogui`) and therefore requires a Windows host with eCADSTAR
-> installed and the bundled circuit files present. The knowledge/RAG/vision agents run independently
-> of the CAD tool.
+See [SECURITY.md](SECURITY.md).
 
 ---
 
-## 7. Security Notes
+## Limitations and future work
 
-- **No secrets in source.** All API keys (OpenAI, Google, Hugging Face) are read from environment
-  variables / a local `.env` file, which is gitignored. Use `.env.example` as the template.
-- If you forked an earlier version that contained hardcoded keys, **rotate those keys** — anything
-  committed to git history must be considered compromised.
-- Raw CAD projects, simulation databases/logs, local document corpora, and model weights are
-  excluded until ownership and redistribution rights are confirmed.
-- The optional RAG web UI is a local development tool: it has no authentication, and it runs with
-  Flask debug mode off unless `PCB_UI_DEBUG=1` is set. Do not expose it to a network.
-
----
-
-## 8. Limitations & Future Work
-
-- **Platform coupling.** The simulation agent depends on GUI automation of a specific Windows CAD
-  install and fixed waits; a headless/scripting API would make it robust and portable.
-- **No end-to-end test in CI.** The automated tests use fakes for the models, the search engines and
-  eCADSTAR; the full pipeline has only been run by hand on the development machines.
+- **Platform coupling.** The simulation agent depends on GUI automation of a Windows CAD install
+  with fixed waits; a scripting API would make it robust and portable.
+- **No end-to-end test in CI.** The tests use fakes for the models, search engines and eCADSTAR;
+  the full pipeline has only been run by hand on the development machines.
 - **Two-hop vision.** Visual results are flattened to text before reasoning; a natively multimodal
-  orchestrator would remove the descriptor round-trip and preserve detail.
-- **Single topology.** Simulation currently targets the default P2P topology; broadening to arbitrary
-  circuits and more analysis types is a natural extension.
-- **Modern agent framework.** Built on LangChain's classic agent; migrating to a graph-based
-  controller (e.g. LangGraph) would give clearer multi-step control and error recovery.
+  orchestrator would keep more detail.
+- **Single topology.** Simulation targets the default P2P topology.
+- **Agent framework.** Built on LangChain's classic agent; a graph-based controller (e.g. LangGraph)
+  would give clearer multi-step control and error recovery.
 
 ---
 
-## 9. Verification & Evidence
+## Verification and evidence
 
-| Capability | Public implementation evidence | Current validation boundary |
+| Capability | Public evidence | Current validation boundary |
 | --- | --- | --- |
-| Tool orchestration | One ReAct agent with Ollama, GPT-4o and Gemini profiles and Pydantic tool schemas; input unwrapping, chat loop and agent wiring are unit-tested with fakes | Provider calls require the user's credentials and model access |
-| Retrieval | Local/PDF/web routing (router parsing and pipeline dispatch unit-tested with fakes) and Chroma-backed indexing/query code | No public retrieval-relevance benchmark is claimed |
+| Tool orchestration | One ReAct agent with Ollama, GPT-4o and Gemini profiles and Pydantic tool schemas; input unwrapping, chat loop and agent wiring unit-tested with fakes | Provider calls need the user's credentials and model access |
+| Retrieval | Local / PDF / web routing (router parsing and pipeline dispatch unit-tested) and Chroma indexing and query code | No public retrieval-relevance benchmark is claimed |
 | Domain adaptation | DeepSeek-R1-Distill-Llama-8B and Llama-3-8B LoRA integration | Three-epoch training runs exist locally; loss alone is not task-quality evidence |
-| CAD automation | Sentence-BERT analysis selection, parameter extraction, and Windows GUI adapter | 78 simulation databases and 78 logs were generated locally but are excluded from GitHub |
-| Portable contracts | Nested tool-input and SI/FD/TDR parameter tests under `tests/` | Enforced with Ruff, mypy and pytest in GitHub Actions |
+| CAD automation | Sentence-BERT analysis selection, parameter extraction and the Windows GUI adapter | 78 simulation databases and 78 logs were generated locally but are not published |
+| Packaging | Ruff, mypy and pytest on every push; the Docker test image is built and run in CI | The runtime image and Compose stack have not been run end to end in CI |
 
-See [docs/EVALUATION.md](docs/EVALUATION.md) for the exact implemented evidence, missing task-level
-metrics, and the benchmark required before making end-to-end accuracy claims.
-
-### Selected eCADSTAR outputs
-
-| Signal-integrity waveform | TDR response | Frequency-domain response |
-| --- | --- | --- |
-| ![Signal-integrity waveform](docs/images/si-waveform.png) | ![TDR response](docs/images/tdr-response.png) | ![Frequency-domain response](docs/images/frequency-domain-response.png) |
+See [docs/EVALUATION.md](docs/EVALUATION.md) for the implemented evidence, the missing task-level
+metrics and the benchmark needed before claiming end-to-end accuracy.
 
 ---
+
+## License
+
+[MIT](LICENSE). The base models (DeepSeek-R1-Distill, Granite-Vision, Sentence-BERT) keep their own
+licences.
 
 <div align="center">
-<sub>Multi-agent LLM assistant for Signal-Integrity EDA — research/educational prototype.</sub>
+<sub>Multi-agent LLM assistant for Signal-Integrity EDA · research prototype</sub>
 </div>
