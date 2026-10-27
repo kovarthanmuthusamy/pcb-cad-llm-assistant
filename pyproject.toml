@@ -4,21 +4,33 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pcb-cad-llm-assistant"
-version = "0.1.0"
-description = "Testable contracts and utilities for a multi-agent PCB CAD assistant"
+version = "0.2.0"
+description = "Multi-agent LLM assistant for a Signal-Integrity PCB CAD workflow"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Kovarthanam Muthusamy" }]
-dependencies = []
+# Only what the import-light core needs. Model, GPU and RAG libraries are in requirements.txt
+# and are imported lazily by the tool that uses them.
+dependencies = [
+  "pydantic>=2.10,<3",
+  "python-dotenv>=1.0,<2",
+]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<9",
   "ruff>=0.9,<1",
+  "mypy>=1.13,<2",
 ]
+
+[project.scripts]
+pcb-assistant = "pcb_assistant.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"pcb_assistant.rag.webui" = ["templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -27,6 +39,21 @@ addopts = "-q"
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+# Training notebooks and experiment scripts by a teammate; kept for reference, not maintained here.
+extend-exclude = ["research"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Prompt text is kept verbatim, including long lines.
+"src/pcb_assistant/tools.py" = ["E501"]
+"src/pcb_assistant/rag/router.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src", "tests", "main.py"]
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true

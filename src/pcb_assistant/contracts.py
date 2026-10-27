@@ -32,6 +32,18 @@ def _first_number(text: str, units: str) -> float | None:
     return float(match.group("value")) if match else None
 
 
+# GREEK CAPITAL OMEGA (U+03A9) and OHM SIGN (U+2126) both appear in engineering text.
+_OHM_SYMBOLS = ("Ω", "Ω")
+
+
+def extract_parameters(text: str) -> tuple[float | None, float | None]:
+    """Return ``(resistance_ohm, line_length_mm)`` found in ``text`` (``None`` if absent)."""
+
+    for symbol in _OHM_SYMBOLS:
+        text = text.replace(symbol, " ohm")
+    return _first_number(text, r"ohms?"), _first_number(text, r"mm|millimeters?")
+
+
 def parse_simulation_request(text: str) -> SimulationRequest:
     """Parse explicit analysis type, resistance, and line length from a request.
 
@@ -54,6 +66,5 @@ def parse_simulation_request(text: str) -> SimulationRequest:
     if analysis_type is None:
         raise ValueError("Request must identify SI, FD, or TDR analysis")
 
-    resistance = _first_number(text.replace("Ω", " ohm"), r"ohms?")
-    line_length = _first_number(text, r"mm|millimeters?")
+    resistance, line_length = extract_parameters(text)
     return SimulationRequest(analysis_type, resistance, line_length)
