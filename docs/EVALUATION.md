@@ -7,11 +7,11 @@ from claims that still require a controlled benchmark.
 
 | Area | Evidence | Interpretation |
 | --- | --- | --- |
-| Orchestration | LangChain ReAct entry points for Ollama, GPT-4o, and Gemini with Pydantic tool schemas | Multiple model backends use the same tool contract |
+| Orchestration | One LangChain ReAct agent with Ollama, GPT-4o, and Gemini profiles and Pydantic tool schemas | Multiple model backends use the same tool contract |
 | Retrieval | Local/PDF/web routing with Chroma-backed retrieval | Retrieval paths are implemented; no public relevance benchmark is claimed |
 | Domain adaptation | Three-epoch LoRA runs for DeepSeek-R1-Distill-Llama-8B and Llama-3-8B | Adapter checkpoints and training logs exist locally; training loss is not task-quality evidence |
 | CAD execution | 78 eCADSTAR simulation databases and 78 logs were generated during development | Demonstrates repeated tool execution; raw CAD artifacts are excluded from the public repository |
-| Portable contracts | Deterministic tests for nested tool inputs and SI/FD/TDR parameter contracts | Runs in GitHub Actions without models, credentials, GPU, Windows, or eCADSTAR |
+| Portable contracts and wiring | Deterministic unit tests for nested tool inputs, SI/FD/TDR parameter parsing, the RAG router and pipeline dispatch, the chat loop and agent wiring (models, search engines and eCADSTAR are replaced by fakes) | Runs in GitHub Actions without models, credentials, GPU, Windows, or eCADSTAR; shows the glue code is correct, not that the answers are good |
 
 ## Required next evaluation
 

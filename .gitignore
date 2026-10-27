@@ -23,22 +23,26 @@ __pycache__/
 *.onnx
 PCB/DeepSeek-R1-Distill-Llama-8B/
 PCB/Meta-Llama-3-8B/
+research/vlm/granite-vision-3.2-2b-*/
+research/vlm/qwen2.5-vl-instruct-7b-*/
+research/vlm/smolvlm-500m-instruct-*/
+# previous location of the same folders (kept so local copies are never committed)
 image_descriptor_tool/granite-vision-3.2-2b-*/
 image_descriptor_tool/qwen2.5-vl-instruct-7b-*/
 image_descriptor_tool/smolvlm-500m-instruct-*/
 
-# ── Vector databases & RAG corpora ─────────────────────────────────────
+# ── Vector databases & RAG corpora (default location: rag_data/) ───────
+rag_data/
+chroma/
+chroma_def/
 chroma_web/
-RAGv2/chroma/
-RAGv2/chroma_def/
-RAGv2/chroma_web/
-RAGv2/data_def/
-RAGv2/data_pdf/
+data_def/
+data_pdf/
 *.sqlite3
 
 # ── Simulation artifacts ───────────────────────────────────────────────
-simulation_tool/simulation_images/
-simulation_tool/sim_files/
+simulation_images/
+sim_files/
 *.srdb
 *.sidf
 *.ssdf
@@ -47,6 +51,7 @@ simulation_tool/sim_files/
 # Test, build, and editor outputs
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 build/
