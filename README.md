@@ -73,29 +73,12 @@ files are deliberately excluded.
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    U["👤 User<br/>(text + up to 3 images)"] --> IMG["🖼️ Image Descriptor<br/>(Granite-Vision VLM)"]
-    IMG -- "image → text" --> ORC
-    U -- "text query" --> ORC
-
-    ORC{{"🧠 Orchestrator LLM<br/>DeepSeek-R1 / GPT-4o / Gemini<br/>(LangChain ReAct + memory)"}}
-
-    ORC -- "decompose & route<br/>(JSON action)" --> T1["📘 PCB Expert<br/>DeepSeek-R1-8B + LoRA"]
-    ORC --> T2["🔎 RAG Agent<br/>docs + web (Chroma)"]
-    ORC --> T3["⚙️ Simulation Agent<br/>eCADSTAR Electrical Editor"]
-
-    T3 -- "result image" --> IMG2["🖼️ Image Descriptor"]
-    IMG2 -- "result → text" --> ORC
-    T1 -- "observation" --> ORC
-    T2 -- "observation" --> ORC
-
-    ORC -- "final answer" --> U
-
-    style ORC fill:#1b5e20,color:#fff
-    style IMG fill:#33415c,color:#fff
-    style IMG2 fill:#33415c,color:#fff
-```
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/architecture-dark.svg">
+  <img src="docs/images/diagrams/architecture.svg" alt="Architecture: the user's question goes to the orchestrator LLM and images to the vision agent; the orchestrator calls the PCB expert, RAG agent and simulation agent, and simulation result plots are described by the vision agent" width="100%">
+</picture>
+</p>
 
 The orchestrator runs a **ReAct** loop (reason → act → observe) and emits one structured JSON
 `{action, action_input}` per step (LangChain `STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION`), with
@@ -105,28 +88,12 @@ are passed through the vision agent first and the whole pipeline reasons in one 
 <details>
 <summary><b>Query lifecycle (sequence diagram)</b></summary>
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant V as Image Descriptor (VLM)
-    participant O as Orchestrator LLM
-    participant E as PCB Expert
-    participant R as RAG Agent
-    participant S as Simulation Agent
-
-    User->>V: query + image(s)
-    V-->>O: textual image description(s)
-    User->>O: text query
-    Note over O: Reason: which tool?
-    O->>S: "SI, R=100Ω, TL=100mm"
-    S->>S: drive eCADSTAR, capture result image
-    S->>V: result image
-    V-->>S: textual description
-    S-->>O: observation (result as text)
-    O->>E: domain follow-up (SI theory)
-    E-->>O: grounded explanation
-    O-->>User: final synthesized answer
-```
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/query-lifecycle-dark.svg">
+  <img src="docs/images/diagrams/query-lifecycle.svg" alt="Sequence of one query: images described, question reasoned over, simulation run in eCADSTAR, result plot described, PCB expert consulted, final answer returned" width="100%">
+</picture>
+</p>
 
 </details>
 
@@ -218,15 +185,12 @@ trained (see [docs/EVALUATION.md](docs/EVALUATION.md)); only the DeepSeek-based 
 [`rag/`](src/pcb_assistant/rag): an LLM router looks at the available corpora and the question and
 picks a source.
 
-```mermaid
-flowchart LR
-    Q["query"] --> C{"Router LLM<br/>pick source"}
-    C -- "1" --> D["Local default<br/>Chroma store"]
-    C -- "2" --> P["PDF documents<br/>(embed → Chroma)"]
-    C -- "3" --> W["Live web search<br/>DuckDuckGo / Google CSE / Brave / Bing"]
-    D & P & W --> A["Answer<br/>(retrieved-context LLM)"]
-    style C fill:#1b5e20,color:#fff
-```
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/rag-agent-dark.svg">
+  <img src="docs/images/diagrams/rag-agent.svg" alt="RAG agent: a router LLM sends the question to the local corpus, uploaded PDFs or live web search, and a generator answers from the retrieved passages" width="100%">
+</picture>
+</p>
 
 Passages are embedded into **Chroma** and `deepseek-r1:32b` answers from the retrieved context. The
 router accepts only 1, 2 or 3 and falls back to the web for anything else. A small local Flask UI
@@ -244,15 +208,12 @@ It has no authentication and is meant for local use only.
 
 ### Simulation agent
 
-```mermaid
-flowchart LR
-    NL["'Run SI with 100Ω<br/>and 100mm line'"] --> SB["Parser + S-BERT fallback<br/>(simulation/request.py)"]
-    SB --> PARAMS["type ∈ {SI, FD, TDR}<br/>R_value, TL_value"]
-    PARAMS --> CAD["eCADSTAR Electrical Editor<br/>GUI automation (pyautogui)<br/>P2P topology"]
-    CAD --> IMG["result image"]
-    style SB fill:#33415c,color:#fff
-    style CAD fill:#7c2d12,color:#fff
-```
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/simulation-agent-dark.svg">
+  <img src="docs/images/diagrams/simulation-agent.svg" alt="Simulation agent: plain-English request, rule-based parser with Sentence-BERT fallback, SimulationRequest, eCADSTAR GUI adapter, result described by the vision agent" width="100%">
+</picture>
+</p>
 
 - **Parameter extraction** ([`simulation/request.py`](src/pcb_assistant/simulation/request.py),
   `contracts.py`): SI, FD (frequency domain) or TDR (time-domain reflectometry), the resistor value
@@ -298,7 +259,7 @@ pcb-cad-llm-assistant/
 ├── tests/                      130 unit tests with fakes
 ├── research/vlm/               VLM fine-tuning notebooks and alternative back-ends (colleague)
 ├── hf_ollama/hf_join.py        merge a LoRA adapter for Ollama export
-├── docs/                       evaluation notes and images
+├── docs/                       evaluation notes, images, diagrams/generate.py (README diagrams)
 ├── Dockerfile                  targets: test (CI checks) and runtime (the assistant)
 ├── docker-compose.yml          Ollama + assistant + RAG web UI
 ├── .github/workflows/ci.yml    Ruff, mypy, pytest and the Docker test image
