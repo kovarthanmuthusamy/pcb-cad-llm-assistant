@@ -106,3 +106,19 @@ def test_google_search_without_results(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(web_search, "_get", lambda *args, **kwargs: Response())
     assert web_search.google_search("q") == []
+
+
+def test_duckduckgo_parsing_with_real_html(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("bs4")
+    html = (
+        '<div><a class="result__url" href="//x">  example.com/si-basics </a>'
+        '<a class="result__url" href="//y">other.org</a><a class="other">skip</a></div>'
+    )
+
+    class Page:
+        text = html
+
+    monkeypatch.setattr(web_search, "_get", lambda url, params=None, headers=None: Page())
+    assert web_search.duckduckgo_search("si basics", num_results=1) == [
+        "https://example.com/si-basics"
+    ]

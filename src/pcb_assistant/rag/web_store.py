@@ -24,8 +24,8 @@ def clean_text(text: str) -> str:
     from bs4 import BeautifulSoup
 
     text = BeautifulSoup(text, "html.parser").get_text()
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"[^\w\s,.!?]", "", text)
+    text = re.sub(r"[^\w\s,.!?]", "", text)  # drop special characters first ...
+    text = re.sub(r"\s+", " ", text)  # ... then collapse the whitespace they leave behind
     return text.strip()
 
 
