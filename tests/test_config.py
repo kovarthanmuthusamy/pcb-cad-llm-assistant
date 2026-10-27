@@ -16,6 +16,18 @@ def test_defaults_are_the_original_hard_coded_values() -> None:
     assert settings.sim_min_similarity == 0.3
     assert settings.ecadstar_open_wait_s == 10.0
     assert settings.ui_debug is False
+    assert settings.ui_host == "127.0.0.1"
+    assert settings.ui_port == 5000
+    assert settings.ollama_host is None
+
+
+def test_container_settings_are_read_from_the_environment() -> None:
+    settings = Settings.from_env(
+        {"OLLAMA_HOST": "http://ollama:11434", "PCB_UI_HOST": "0.0.0.0", "PCB_UI_PORT": "8080"}
+    )
+    assert settings.ollama_host == "http://ollama:11434"
+    assert settings.ui_host == "0.0.0.0"
+    assert settings.ui_port == 8080
 
 
 def test_environment_overrides_defaults() -> None:
@@ -45,7 +57,12 @@ def test_blank_values_fall_back_to_defaults() -> None:
 
 @pytest.mark.parametrize(
     ("name", "value"),
-    [("PCB_TEMPERATURE", "warm"), ("PCB_RAG_NUM_RESULTS", "many"), ("PCB_UI_DEBUG", "maybe")],
+    [
+        ("PCB_TEMPERATURE", "warm"),
+        ("PCB_RAG_NUM_RESULTS", "many"),
+        ("PCB_UI_DEBUG", "maybe"),
+        ("PCB_UI_PORT", "web"),
+    ],
 )
 def test_invalid_values_name_the_variable(name: str, value: str) -> None:
     with pytest.raises(ValueError, match=name):

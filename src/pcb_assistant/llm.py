@@ -54,8 +54,14 @@ def build_llm(provider: str, settings: Settings | None = None) -> Any:
     if provider == "ollama":
         from langchain_community.chat_models import ChatOllama
 
+        # The ``ollama`` client used by the RAG modules reads OLLAMA_HOST itself; this older
+        # LangChain wrapper needs the URL passed explicitly.
+        host = {"base_url": settings.ollama_host} if settings.ollama_host else {}
         return ChatOllama(
-            model=settings.ollama_model, response_format="json", temperature=settings.temperature
+            model=settings.ollama_model,
+            response_format="json",
+            temperature=settings.temperature,
+            **host,
         )
     if provider == "openai":
         from langchain_openai import ChatOpenAI

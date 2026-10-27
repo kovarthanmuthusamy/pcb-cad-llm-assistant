@@ -82,3 +82,17 @@ def test_web_form_is_forwarded_to_the_web_cli(client_and_calls: Any) -> None:
             "3",
         )
     ]
+
+
+def test_main_binds_to_the_configured_host_and_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    runs: list[dict[str, Any]] = []
+
+    class FakeApp:
+        def run(self, **kwargs: Any) -> None:
+            runs.append(kwargs)
+
+    settings = Settings(ui_host="0.0.0.0", ui_port=8080)
+    monkeypatch.setattr(webui, "get_settings", lambda: settings)
+    monkeypatch.setattr(webui, "create_app", lambda s: FakeApp())
+    webui.main()
+    assert runs == [{"host": "0.0.0.0", "port": 8080, "debug": False}]

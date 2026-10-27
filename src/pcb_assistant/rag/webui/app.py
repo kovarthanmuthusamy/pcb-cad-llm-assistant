@@ -93,7 +93,9 @@ def create_app(settings: Settings | None = None) -> Any:
 
 def main() -> None:
     settings = get_settings()
-    create_app(settings).run(debug=settings.ui_debug)
+    # 127.0.0.1 by default; the Docker image sets PCB_UI_HOST=0.0.0.0 and Compose publishes
+    # the port on the host's loopback interface only.
+    create_app(settings).run(host=settings.ui_host, port=settings.ui_port, debug=settings.ui_debug)
 
 
 if __name__ == "__main__":

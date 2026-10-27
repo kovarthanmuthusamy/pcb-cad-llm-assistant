@@ -53,6 +53,8 @@ class Settings:
     openai_model: str = "gpt-4o"
     google_model: str = "gemini-1.5-pro"
     temperature: float = 0.7
+    # Ollama server, e.g. http://ollama:11434 in Docker Compose; None means localhost
+    ollama_host: str | None = None
 
     # Retrieval-augmented generation
     rag_home: Path = Path("rag_data")
@@ -88,6 +90,8 @@ class Settings:
 
     # Local web UI for the RAG corpus
     ui_debug: bool = False
+    ui_host: str = "127.0.0.1"
+    ui_port: int = 5000
 
     # --- derived locations -------------------------------------------------------------
     @property
@@ -125,6 +129,7 @@ class Settings:
             openai_model=_read(env, "PCB_OPENAI_MODEL", d.openai_model, str),
             google_model=_read(env, "PCB_GOOGLE_MODEL", d.google_model, str),
             temperature=_read(env, "PCB_TEMPERATURE", d.temperature, float),
+            ollama_host=_optional(env, "OLLAMA_HOST"),
             rag_home=_read(env, "PCB_RAG_HOME", d.rag_home, Path),
             rag_model=_read(env, "PCB_RAG_MODEL", d.rag_model, str),
             rag_router_model=_read(env, "PCB_RAG_ROUTER_MODEL", d.rag_router_model, str),
@@ -152,6 +157,8 @@ class Settings:
             ecadstar_open_wait_s=_read(env, "ECADSTAR_OPEN_WAIT_S", d.ecadstar_open_wait_s, float),
             ecadstar_run_wait_s=_read(env, "ECADSTAR_RUN_WAIT_S", d.ecadstar_run_wait_s, float),
             ui_debug=_read(env, "PCB_UI_DEBUG", d.ui_debug, _to_bool),
+            ui_host=_read(env, "PCB_UI_HOST", d.ui_host, str),
+            ui_port=_read(env, "PCB_UI_PORT", d.ui_port, int),
         )
 
 
