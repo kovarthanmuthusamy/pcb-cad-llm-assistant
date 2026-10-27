@@ -23,6 +23,9 @@ dev = [
   "mypy>=1.13,<2",
   "flask>=3.1,<4",  # lets the web UI tests run
   "beautifulsoup4>=4.13,<5",  # lets the HTML parsing tests run
+  # type stubs for mypy; mypy does not skip these even with ignore_missing_imports
+  "types-requests>=2.32,<3",
+  "types-PyAutoGUI>=0.9,<1",
 ]
 
 [project.scripts]
