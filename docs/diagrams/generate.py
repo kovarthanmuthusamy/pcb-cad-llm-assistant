@@ -185,77 +185,105 @@ class Canvas:
 
 # --- diagrams ----------------------------------------------------------------------------
 def architecture(t: Theme) -> Canvas:
-    c = Canvas(960, 560, t, "System architecture of the PCB CAD LLM assistant")
+    """How a user request and the tool calls flow through the system."""
+
+    c = Canvas(960, 700, t, "How a request flows through the orchestrator and its tools")
 
     c.card(
-        200,
-        24,
-        260,
-        68,
+        360,
+        20,
+        240,
+        72,
         kind="input",
         tag="Input",
         title="User",
-        lines=("Question + up to 3 images",),
+        lines=("(text + up to 3 images)",),
     )
     c.card(
         40,
-        160,
-        580,
+        140,
+        240,
+        84,
+        kind="vision",
+        tag="Vision",
+        title="Image Descriptor",
+        lines=("(Granite-Vision VLM)",),
+    )
+    c.card(
+        300,
+        270,
+        360,
         104,
         kind="orchestrator",
         tag="Orchestrator",
         title="Orchestrator LLM",
-        lines=(
-            "LangChain ReAct agent · one JSON action per step · memory",
-            "DeepSeek-R1 via Ollama  ·  GPT-4o  ·  Gemini",
-        ),
+        lines=("DeepSeek-R1 / GPT-4o / Gemini", "(LangChain ReAct + memory)"),
+    )
+    c.card(
+        20,
+        470,
+        240,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="PCB Expert",
+        lines=("DeepSeek-R1-8B + LoRA",),
+    )
+    c.card(
+        360,
+        470,
+        240,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="RAG Agent",
+        lines=("docs + web (Chroma)",),
     )
     c.card(
         680,
-        160,
+        470,
         240,
-        104,
+        84,
+        kind="tool",
+        tag="Tool",
+        title="Simulation Agent",
+        lines=("eCADSTAR Electrical Editor",),
+    )
+    c.card(
+        680,
+        610,
+        240,
+        72,
         kind="vision",
-        tag="Vision agent",
-        title="Image descriptor",
-        lines=("Granite-Vision 3.2 2B + LoRA", "image → text"),
+        tag="Vision",
+        title="Image Descriptor",
+        lines=("(Granite-Vision VLM)",),
     )
 
-    tools = [
-        (40, "PCB expert", ("Fine-tuned SI / EDA answers",)),
-        (360, "RAG agent", ("Documents and live web",)),
-        (680, "Simulation agent", ("Text → eCADSTAR run",)),
-    ]
-    for x, title, lines in tools:
-        c.card(x, 344, 240, 88, kind="tool", tag="Tool", title=title, lines=lines)
-    resources = [
-        (40, "DeepSeek-R1-Distill-Llama-8B", "+ LoRA adapter"),
-        (360, "Chroma vector stores", "PDFs · web search engines"),
-        (680, "eCADSTAR Electrical Editor", "Windows GUI automation"),
-    ]
-    for x, title, sub in resources:
-        c.card(
-            x, 476, 240, 64, kind="external", tag="Runs on", title=title, lines=(sub,), dashed=True
-        )
-        c.arrow(f"M{x + 120},432 V476", dashed=True, head=False)
+    # user request in, images through the vision agent, final answer out
+    c.arrow("M360,56 H160 V140")
+    c.arrow("M160,224 V322 H300")
+    c.label(160, 268, "image → text")
+    c.arrow("M450,92 V270")
+    c.label(440, 186, "text query", anchor="end")
+    c.arrow("M510,270 V92")
+    c.label(520, 186, "final answer", anchor="start")
 
-    # user <-> orchestrator, images to the vision agent
-    c.arrow("M300,92 V160")
-    c.label(290, 131, "question", anchor="end")
-    c.arrow("M360,160 V92")
-    c.label(370, 131, "answer", anchor="start")
-    c.arrow("M460,58 H800 V160")
-    c.label(630, 62, "images")
-    c.arrow("M680,212 H620")
-    c.label(650, 202, "text")
+    # tool calls (down) and observations (up)
+    c.arrow("M360,374 V412 H110 V470")
+    c.label(235, 403, "decompose & route (JSON action)", backdrop=False)
+    c.arrow("M170,470 V438 H400 V374")
+    c.label(300, 455, "observation")
+    c.arrow("M460,374 V470")
+    c.arrow("M500,470 V374")
+    c.label(508, 428, "observation", anchor="start")
+    c.arrow("M620,374 V412 H760 V470")
 
-    # orchestrator <-> tools
-    c.arrow("M160,264 V344", both=True)
-    c.arrow("M480,264 V344", both=True)
-    c.arrow("M590,264 V304 H760 V344", both=True)
-    c.arrow("M860,344 V264")
-    c.label(870, 309, "result plot", anchor="start")
-    c.label(320, 309, "JSON action  ↓   ·   text observation  ↑")
+    # simulation result image described by the vision agent, back as text
+    c.arrow("M800,554 V610")
+    c.label(810, 586, "result image", anchor="start")
+    c.arrow("M920,646 H944 V322 H660")
+    c.label(800, 322, "result → text")
     return c
 
 
