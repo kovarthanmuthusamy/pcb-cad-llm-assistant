@@ -85,17 +85,17 @@ The orchestrator runs a **ReAct** loop (reason → act → observe) and emits on
 `ConversationBufferMemory` for short-term context. Every tool returns **text**, so visual results
 are passed through the vision agent first and the whole pipeline reasons in one textual space.
 
-<details>
-<summary><b>Query lifecycle (sequence diagram)</b></summary>
+### How one request flows
+
+An example request with an attached circuit image that needs a simulation and a follow-up
+explanation:
 
 <p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/diagrams/query-lifecycle-dark.svg">
-  <img src="docs/images/diagrams/query-lifecycle.svg" alt="Sequence of one query: images described, question reasoned over, simulation run in eCADSTAR, result plot described, PCB expert consulted, final answer returned" width="100%">
+  <img src="docs/images/diagrams/query-lifecycle.svg" alt="One request step by step: the image is described, the orchestrator reasons and calls the simulation agent, which drives eCADSTAR, has the result image described and returns it as an observation; the PCB expert adds a grounded explanation; the final answer goes back to the user" width="100%">
 </picture>
 </p>
-
-</details>
 
 ---
 

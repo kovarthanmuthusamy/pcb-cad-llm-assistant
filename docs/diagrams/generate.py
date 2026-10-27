@@ -288,32 +288,36 @@ def architecture(t: Theme) -> Canvas:
 
 
 def query_lifecycle(t: Theme) -> Canvas:
+    """One example request, step by step (same steps as the original sequence diagram)."""
+
     names = [
         ("User", "input"),
-        ("Vision agent", "vision"),
-        ("Orchestrator", "orchestrator"),
-        ("Simulation agent", "tool"),
-        ("eCADSTAR", "external"),
-        ("PCB expert", "tool"),
+        ("Image Descriptor (VLM)", "vision"),
+        ("Orchestrator LLM", "orchestrator"),
+        ("PCB Expert", "tool"),
+        ("RAG Agent", "tool"),
+        ("Simulation Agent", "tool"),
     ]
+    user, vision, orch, expert, _rag, sim = range(len(names))
     xs = [85 + 158 * i for i in range(len(names))]
-    steps: list[tuple[int, int, str, bool]] = [
-        (0, 1, "attached images", False),
-        (1, 2, "image descriptions", True),
-        (0, 2, "question", False),
-        (2, 3, 'Simulation: "TDR, 100 Ω, 100 mm"', False),
-        (3, 4, "patch circuit, run analysis", False),
-        (4, 3, "result plot", True),
-        (3, 1, "result plot", False),
-        (1, 3, "plot description", True),
-        (3, 2, "observation (text)", True),
-        (2, 5, "explain the reflection", False),
-        (5, 2, "domain explanation", True),
-        (2, 0, "final answer", True),
+    # (source, target, text, is_reply); a None source is a note over the target
+    rows: list[tuple[int | None, int, str, bool]] = [
+        (user, vision, "query + image(s)", False),
+        (vision, orch, "textual image description(s)", True),
+        (user, orch, "text query", False),
+        (None, orch, "Reason: which tool?", False),
+        (orch, sim, '"SI, R=100Ω, TL=100mm"', False),
+        (sim, sim, "drive eCADSTAR, capture result image", False),
+        (sim, vision, "result image", False),
+        (vision, sim, "textual description", True),
+        (sim, orch, "observation (result as text)", True),
+        (orch, expert, "domain follow-up (SI theory)", False),
+        (expert, orch, "grounded explanation", True),
+        (orch, user, "final synthesized answer", True),
     ]
-    top, gap = 92, 44
-    height = top + gap * len(steps) + 56
-    c = Canvas(960, height, t, "Lifecycle of one query through the agents")
+    top, gap = 92, 46
+    height = top + gap * len(rows) + 56
+    c = Canvas(960, height, t, "How one request flows through the system")
 
     for x, (name, kind) in zip(xs, names, strict=True):
         accent = t.accents[kind]
@@ -322,29 +326,52 @@ def query_lifecycle(t: Theme) -> Canvas:
             'stroke-dasharray="4 5"/>'
         )
         c.parts.append(
-            f'<rect x="{x - 70}" y="20" width="140" height="44" rx="10" fill="{t.card}" '
+            f'<rect x="{x - 74}" y="20" width="148" height="44" rx="10" fill="{t.card}" '
             f'stroke="{accent}" stroke-width="1.5"/>'
-            f'<rect x="{x - 70}" y="20" width="140" height="44" rx="10" fill="{accent}" '
+            f'<rect x="{x - 74}" y="20" width="148" height="44" rx="10" fill="{accent}" '
             'fill-opacity="0.08"/>'
         )
-        c.text(x, 47, name, size=13.5, weight=600)
+        c.text(x, 47, name, size=12 if len(name) > 16 else 13.5, weight=600)
 
-    # the orchestrator reasons between receiving the question and calling a tool
+    def row_y(i: int) -> int:
+        return top + gap * i + gap // 2
+
+    # the orchestrator is active from the text query until the final answer
     c.parts.append(
-        f'<rect x="{xs[2] - 6}" y="{top + gap * 2 + gap // 2 - 4}" width="12" '
-        f'height="{gap * 9 + 8}" rx="3" fill="{t.accents["orchestrator"]}" '
-        'fill-opacity="0.18"/>'
+        f'<rect x="{xs[orch] - 6}" y="{row_y(2) - 4}" width="12" '
+        f'height="{row_y(len(rows) - 1) - row_y(2) + 8}" rx="3" '
+        f'fill="{t.accents["orchestrator"]}" fill-opacity="0.18"/>'
     )
 
-    for i, (src, dst, text, reply) in enumerate(steps):
-        y = top + gap * i + gap // 2
-        x1, x2 = xs[src], xs[dst]
-        pad = 8 if src == 2 or dst == 2 else 2
+    step = 0
+    for i, (src, dst, text, reply) in enumerate(rows):
+        y = row_y(i)
+        x2 = xs[dst]
+        if src is None:  # note
+            accent = t.accents["orchestrator"]
+            c.parts.append(
+                f'<rect x="{x2 - 90}" y="{y - 16}" width="180" height="30" rx="8" '
+                f'fill="{t.card}" stroke="{accent}" stroke-width="1.2"/>'
+                f'<rect x="{x2 - 90}" y="{y - 16}" width="180" height="30" rx="8" '
+                f'fill="{accent}" fill-opacity="0.10"/>'
+            )
+            c.text(x2, y + 4, text, size=12.5, color=accent, weight=600)
+            continue
+        step += 1
+        x1 = xs[src]
+        colour = t.accents[names[src][1]]
+        if src == dst:  # self call
+            c.arrow(f"M{x1 + 8},{y - 6} H{x1 + 46} V{y + 12} H{x1 + 10}")
+            c.label(x1 - 12, y - 13, text, anchor="end", backdrop=False)
+            c.badge(x1 + 26, y - 6, step, colour)
+            continue
+        pad = 8 if orch in (src, dst) else 2
         start = x1 + (pad if x2 > x1 else -pad)
         end = x2 - (pad if x2 > x1 else -pad)
         c.arrow(f"M{start},{y} H{end}", dashed=reply)
         c.label((x1 + x2) / 2, y - 13, text, backdrop=False)
-        c.badge(x1 + (18 if x2 > x1 else -18), y, i + 1, t.accents[names[src][1]])
+        c.badge(x1 + (18 if x2 > x1 else -18), y, step, colour)
+
     legend_y = height - 22
     c.arrow(f"M30,{legend_y - 4} H70")
     c.text(78, legend_y, "request", size=11.5, color=t.muted, anchor="start")
